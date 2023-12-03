@@ -1,0 +1,95 @@
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class ConsultaCarreras extends JFrame {
+
+    private JComboBox<String> escuelaComboBox;
+    private final JTextArea resultadoTextArea;
+
+    public ConsultaCarreras() {
+        // Configuración del frame
+        super("Consulta de Carreras UNAPEC");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(400, 300);
+        setLocationRelativeTo(null);
+
+        // Configuración de componentes
+        escuelaComboBox = new JComboBox<>(new String[]{"Ingeniería", "Negocios", "Artes"});
+        JButton consultarButton = new JButton("Consultar Carreras");
+        resultadoTextArea = new JTextArea();
+
+        // Configuración del layout
+        setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+
+        // Manejador de eventos para el botón
+        consultarButton.addActionListener((ActionEvent e) -> {
+            String escuelaSeleccionada = (String) escuelaComboBox.getSelectedItem();
+            consultarCarreras(escuelaSeleccionada);
+        });
+
+        // Añadir componentes al frame
+        add(new JLabel("Seleccione una Escuela:"));
+        add(escuelaComboBox);
+        add(consultarButton);
+        add(new JLabel("Carreras Ofertadas:"));
+        add(new JScrollPane(resultadoTextArea));
+
+        // Hacer visible el frame
+        setVisible(true);
+    }
+
+    private void consultarCarreras(String escuela) {
+        resultadoTextArea.setText("");
+
+        try {
+            // Establecer conexión con la base de datos
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/unapec", "acceso", "prueba");
+
+            // Consulta SQL parametrizada
+            String consultaSQL = "SELECT nombre FROM carreras WHERE escuela = ?";
+            PreparedStatement preparedStatement = connection.prepareStatement(consultaSQL);
+            preparedStatement.setString(1, escuela);
+
+            // Ejecutar la consulta
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // Procesar los resultados
+            while (resultSet.next()) {
+                String nombreCarrera = resultSet.getString("nombre");
+                resultadoTextArea.append(nombreCarrera + "\n");
+            }
+
+            // Cerrar recursos
+            resultSet.close();
+            preparedStatement.close();
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al consultar la base de datos", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public static void main(String[] args) {
+        // Cargar el controlador JDBC
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al cargar el controlador JDBC", "Error", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+
+        // Crear una instancia de la aplicación
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new ConsultaCarreras();
+            }
+        });
+    }
